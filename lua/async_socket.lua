@@ -466,7 +466,7 @@ function UDP_TRANSPORT:recv_impl(...)
 end
 
 function UDP_TRANSPORT:send_sync_impl(send, timeout, msg, ...)
-  local ok, err = self.private_.cnn[send](self.private_.cnn, msg)
+  local ok, err = self.private_.cnn[send](self.private_.cnn, msg, ...)
   if ok then return ok end
   if err == "closed" then self:on_closed() end
   return nil, err
