@@ -107,11 +107,11 @@ local function async_udp_receive(sock, method, size, timeout, defer_hook)
   end
 end
 
-local function async_udp_send(sock, method, msg, timeout, defer_hook)
+local function async_udp_send(sock, method, msg, timeout, defer_hook, ...)
   -- In UDP, the send method never blocks and the only way it can fail is if the 
   -- underlying transport layer refuses to send a message to the 
   -- specified address (i.e. no interface accepts the address). 
-  return sock[method](sock, msg)
+  return sock[method](sock, msg, ...)
 end
 
 local TIMEOUT_MSEC = 1000
@@ -465,16 +465,16 @@ function UDP_TRANSPORT:recv_impl(...)
   return self:recv_sync_impl(...) 
 end
 
-function UDP_TRANSPORT:send_sync_impl(send, timeout, msg)
+function UDP_TRANSPORT:send_sync_impl(send, timeout, msg, ...)
   local ok, err = self.private_.cnn[send](self.private_.cnn, msg)
   if ok then return ok end
   if err == "closed" then self:on_closed() end
   return nil, err
 end
 
-function UDP_TRANSPORT:send_async_impl(send, timeout, msg)
+function UDP_TRANSPORT:send_async_impl(send, timeout, msg, ...)
   if timeout then timeout = timeout * TIMEOUT_MSEC end
-  local ok, err = async_udp_send(self.private_.cnn, send, msg, timeout, self.private_.idle)
+  local ok, err = async_udp_send(self.private_.cnn, send, msg, timeout, self.private_.idle, ...)
   if ok then return ok end
   if err == "closed" then self:on_closed() end
   return nil,err
