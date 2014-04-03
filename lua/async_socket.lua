@@ -97,8 +97,11 @@ local function async_udp_receive(sock, method, size, timeout, defer_hook)
   end
 
   while true do
-    local ok, err = sock[method](sock, size)
-    if ok then return ok end
+    local ok, err, param = sock[method](sock, size)
+    if ok then
+      if err then return ok, err, param end
+      return ok
+    end
     if err ~= 'timeout' then return nil, err end
     if timeout and rtimer:rest() == 0 then
       return nil, 'timeout'
@@ -443,8 +446,11 @@ end
 
 function UDP_TRANSPORT:recv_async_impl(recv, timeout, size)
   if timeout then timeout = timeout * TIMEOUT_MSEC end
-  local ok, err = async_udp_receive(self.private_.cnn, recv, size, timeout, self.private_.idle)
-  if ok then return ok end
+  local ok, err, param = async_udp_receive(self.private_.cnn, recv, size, timeout, self.private_.idle)
+  if ok then
+    if err then return ok, err, param end
+    return ok
+  end
   if err == "closed" then self:on_closed() end
   return nil,err
 end
@@ -453,8 +459,12 @@ function UDP_TRANSPORT:recv_sync_impl(recv, timeout, ...)
   if timeout then timeout = timeout * TIMEOUT_SEC end
   local ok, err = self.private_.cnn:settimeout(timeout)
   if not ok then return nil, err end
-  ok, err = self.private_.cnn[recv](self.private_.cnn, ...)
-  if ok then return ok end
+  local param
+  ok, err, param = self.private_.cnn[recv](self.private_.cnn, ...)
+  if ok then
+    if err then return ok, err, param end
+    return ok
+  end
   if err == "closed" then self:on_closed() end
   return nil, err
 end
@@ -490,7 +500,7 @@ function UDP_TRANSPORT:send(...) return self:send_impl("send", ...) end
 function UDP_TRANSPORT:sendto(...) return self:send_impl("sendto", ...) end
 
 function UDP_TRANSPORT:recv(...) return self:recv_impl("receive", ...) end
-function UDP_TRANSPORT:recvfrom(...) return self:send_impl("receivefrom", ...) end
+function UDP_TRANSPORT:recvfrom(...) return self:recv_impl("receivefrom", ...) end
 
 end
 ----------------------------------------------
